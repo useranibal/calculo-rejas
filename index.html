@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f3ed">
+  <title>Trazado · cálculo de rejas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+    :root {
+      color-scheme: light;
+      --paper: #f4f3ed;
+      --surface: #fffefa;
+      --ink: #202923;
+      --muted: #778078;
+      --line: #dfe2d9;
+      --green: #246b50;
+      --green-soft: #e4efe7;
+      --orange: #dc704b;
+      --orange-soft: #f9e8df;
+      --blue: #467e9e;
+      --shadow: 0 8px 30px rgba(33, 47, 37, .055);
+      font-family: 'Manrope', 'Segoe UI', sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    .topbar { height: 68px; padding: 0 5vw; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(255,254,250,.82); }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 15px; font-weight: 800; letter-spacing: 0; }
+    .brand-mark { width: 29px; height: 29px; display: grid; place-items: center; color: #fff; background: var(--green); border-radius: 7px; }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .top-note { font: 11px 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; }
+    main { width: min(1440px, 100%); padding: 30px 5vw 56px; margin: auto; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 23px; }
+    .eyebrow { margin: 0 0 8px; font: 11px 'DM Mono', monospace; text-transform: uppercase; color: var(--green); }
+    h1 { margin: 0; font-size: clamp(26px, 3vw, 36px); line-height: 1.13; font-weight: 700; letter-spacing: 0; }
+    .intro-copy { max-width: 415px; margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .status-pill { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid #cbdacf; border-radius: 5px; color: var(--green); background: var(--green-soft); font: 11px 'DM Mono', monospace; }
+    .status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #39835f; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(310px, .8fr); align-items: start; gap: 18px; }
+    .left-column, .right-column { display: grid; gap: 18px; min-width: 0; }
+    .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+    .panel-head { min-height: 55px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 17px; border-bottom: 1px solid var(--line); }
+    .panel-title { margin: 0; font-size: 13px; font-weight: 800; }
+    .panel-kicker { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+    .micro-label { font: 10px 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; }
+    .plan-wrap { position: relative; padding: 12px; background-color: #fafaf6; background-image: radial-gradient(#d9ded5 0.7px, transparent .7px); background-size: 15px 15px; }
+    #plan { display: block; width: 100%; height: 330px; overflow: visible; }
+    .plan-legend { display: flex; flex-wrap: wrap; gap: 15px; padding: 10px 17px 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-swatch { width: 16px; height: 5px; border-radius: 3px; background: var(--green); }
+    .legend-swatch.gate { background: var(--orange); }
+    .legend-swatch.post { width: 8px; height: 8px; border: 2px solid var(--green); border-radius: 50%; background: var(--surface); }
+    .segments-body { padding: 14px 16px 16px; }
+    .segment-list { display: grid; gap: 8px; }
+    .segment-row { display: grid; grid-template-columns: 30px minmax(70px, 1fr) minmax(90px, 1fr) minmax(112px, 1.15fr) 34px; align-items: end; gap: 9px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    .segment-index { align-self: center; color: #8b948c; font: 11px 'DM Mono', monospace; }
+    .field { display: grid; gap: 5px; min-width: 0; }
+    .field label { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .field input, .field select { width: 100%; min-width: 0; height: 35px; padding: 0 9px; border: 1px solid var(--line); border-radius: 4px; outline: none; background: #fffefa; color: var(--ink); font-size: 12px; }
+    .field input:focus, .field select:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(36,107,80,.12); }
+    .delete-segment { width: 32px; height: 35px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #899189; cursor: pointer; font-size: 19px; }
+    .delete-segment:hover { color: #b34b34; border-color: #f0d3c9; background: #fff7f3; }
+    .row-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
+    .button { min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line); border-radius: 4px; background: #fffefa; color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 700; }
+    .button:hover { border-color: #b8c8bb; background: #f7faf6; }
+    .button-primary { border-color: var(--green); background: var(--green); color: #fff; }
+    .button-primary:hover { border-color: #1a583f; background: #1a583f; }
+    .button svg { width: 14px; height: 14px; }
+    .endpoints { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+    .check-label { display: flex; align-items: center; gap: 8px; color: #5f6a61; font-size: 11px; cursor: pointer; }
+    .check-label input { width: 15px; height: 15px; margin: 0; accent-color: var(--green); }
+    .settings-body { padding: 14px 16px 16px; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; }
+    .settings-grid .field label { font-size: 10px; }
+    .units-input { position: relative; }
+    .units-input input { padding-right: 36px; }
+    .unit { position: absolute; top: 10px; right: 10px; color: var(--muted); font: 10px 'DM Mono', monospace; pointer-events: none; }
+    .divider-label { grid-column: 1 / -1; margin: 3px 0 -3px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--green); font: 10px 'DM Mono', monospace; text-transform: uppercase; }
+    .setting-wide { grid-column: 1 / -1; }
+    .short-options { display: grid; grid-template-columns: 1fr 92px; gap: 9px; align-items: end; }
+    .helper { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .summary-panel { background: #263b30; color: #f4f5ee; border-color: #263b30; }
+    .summary-panel .panel-head { border-color: rgba(255,255,255,.14); }
+    .summary-panel .panel-kicker, .summary-panel .micro-label { color: #bdc9be; }
+    .summary-body { padding: 14px 17px 16px; }
+    .metric-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.13); }
+    .metric-name { color: #d0d8d0; font-size: 11px; }
+    .metric-value { color: #fffefa; font: 500 15px 'DM Mono', monospace; text-align: right; }
+    .metric-value small { color: #becbc0; font-size: 10px; }
+    .material-list { display: grid; gap: 0; margin-top: 11px; }
+    .material-item { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .material-name { color: #f3f5ee; font-size: 11px; font-weight: 700; }
+    .material-detail { margin-top: 3px; color: #b8c4ba; font: 10px 'DM Mono', monospace; }
+    .material-qty { color: #c4e3cd; font: 500 12px 'DM Mono', monospace; text-align: right; white-space: nowrap; }
+    .summary-actions { display: flex; gap: 8px; margin-top: 13px; }
+    .summary-actions .button { flex: 1; border-color: rgba(255,255,255,.28); background: transparent; color: #fff; }
+    .summary-actions .button:hover { background: rgba(255,255,255,.1); }
+    .caveat { margin: 12px 0 0; padding-left: 9px; border-left: 2px solid #e0a27d; color: #d4ddd5; font-size: 10px; line-height: 1.55; }
+    .empty-state { padding: 23px 10px; color: var(--muted); font-size: 12px; text-align: center; }
+    .footer-note { padding: 16px 3px 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .toast { position: fixed; right: 18px; bottom: 18px; z-index: 5; padding: 11px 14px; transform: translateY(10px); opacity: 0; border-radius: 5px; background: #263b30; color: #fff; font-size: 12px; transition: .2s ease; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    @media (max-width: 900px) {
+      main { padding-right: 24px; padding-left: 24px; }
+      .workspace { grid-template-columns: minmax(0, 1fr) 310px; gap: 12px; }
+      .left-column, .right-column { gap: 12px; }
+      .segment-row { grid-template-columns: 25px minmax(65px, .8fr) minmax(82px, 1fr) minmax(100px, 1.2fr) 30px; gap: 6px; padding: 8px; }
+    }
+    @media (max-width: 700px) {
+      .topbar { height: 58px; padding: 0 18px; }
+      .top-note { font-size: 9px; }
+      main { padding: 23px 14px 34px; }
+      .intro { align-items: start; margin-bottom: 17px; }
+      .intro-copy { max-width: 360px; font-size: 12px; }
+      .status-pill { display: none; }
+      .workspace { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .left-column, .right-column { gap: 12px; }
+      .right-column { grid-row: 1; }
+      .summary-body { padding: 10px 14px 13px; }
+      .summary-panel .panel-head { min-height: 49px; }
+      .metric-row { padding: 6px 0; }
+      .metric-name { font-size: 10px; }
+      .metric-value { font-size: 13px; }
+      .material-list { grid-template-columns: 1fr 1fr; column-gap: 13px; }
+      .material-item { gap: 4px; }
+      .material-name { font-size: 10px; }
+      .material-detail, .material-qty { font-size: 9px; }
+      .caveat { margin-top: 9px; }
+      #plan { height: 245px; }
+      .plan-wrap { padding: 6px; }
+      .segment-row { grid-template-columns: 22px minmax(64px, .8fr) minmax(80px, 1fr) minmax(98px, 1.15fr) 28px; gap: 5px; padding: 7px 6px; }
+      .field label { font-size: 9px; }
+      .field input, .field select { height: 34px; padding: 0 6px; font-size: 11px; }
+      .delete-segment { width: 27px; }
+    }
+    @media (max-width: 390px) {
+      .segment-row { grid-template-columns: 18px minmax(58px, .75fr) minmax(74px, .95fr) minmax(88px, 1.1fr) 26px; gap: 4px; padding: 6px 4px; }
+      .field input, .field select { padding: 0 4px; font-size: 10px; }
+      .material-list { grid-template-columns: 1fr; }
+      .endpoints { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V4h16v16M8 4v16m8-16v16M4 9h16m-16 6h16"/></svg></span><span>Trazado <span style="color:var(--muted);font-weight:500">/ taller</span></span></div>
+    <span class="top-note">Planificador de materiales · v0.1</span>
+  </header>
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">Rejas · estimación de perfiles</p>
+        <h1>Dibuja el recorrido.<br>Calcula qué comprar.</h1>
+        <p class="intro-copy">Agrega tramos rectos, gira según el terreno y marca dónde va la puerta. El despiece se actualiza mientras trabajas.</p>
+      </div>
+      <span class="status-pill">Cálculo en vivo</span>
+    </section>
+    <div class="workspace">
+      <div class="left-column">
+        <section class="panel" aria-labelledby="plan-title">
+          <div class="panel-head"><div><h2 class="panel-title" id="plan-title">Vista en planta</h2><p class="panel-kicker">Cada tramo comienza donde termina el anterior</p></div><span class="micro-label" id="total-length">0,0 m lineales</span></div>
+          <div class="plan-wrap"><svg id="plan" role="img" aria-label="Plano del recorrido de la reja"></svg></div>
+          <div class="plan-legend"><span class="legend-item"><i class="legend-swatch"></i> Reja</span><span class="legend-item"><i class="legend-swatch gate"></i> Puerta</span><span class="legend-item"><i class="legend-swatch post"></i> Pilar / esquina</span></div>
+        </section>
+        <section class="panel" aria-labelledby="segments-title">
+          <div class="panel-head"><div><h2 class="panel-title" id="segments-title">Recorrido y paños</h2><p class="panel-kicker">Los giros son de 90° respecto al tramo anterior</p></div><span class="micro-label" id="segment-count">0 tramos</span></div>
+          <div class="segments-body">
+            <div class="segment-list" id="segment-list"></div>
+            <div class="row-actions"><button class="button button-primary" id="add-segment" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3v14M3 10h14"/></svg>Agregar tramo</button><button class="button" id="reset" type="button">Cargar ejemplo</button></div>
+            <div class="endpoints">
+              <label class="check-label"><input id="start-wall" type="checkbox" checked> Inicio anclado a muro</label>
+              <label class="check-label"><input id="end-wall" type="checkbox" checked> Final anclado a muro</label>
+            </div>
+          </div>
+        </section>
+      </div>
+      <aside class="right-column">
+        <section class="panel summary-panel" aria-labelledby="summary-title">
+          <div class="panel-head"><div><h2 class="panel-title" id="summary-title">Lista de compra</h2><p class="panel-kicker">Estimación de perfiles y cantidades</p></div><span class="micro-label">Material</span></div>
+          <div class="summary-body">
+            <div class="metric-row"><span class="metric-name">Recorrido total</span><span class="metric-value" id="summary-length">0,0 <small>m</small></span></div>
+            <div class="metric-row"><span class="metric-name">Pilares</span><span class="metric-value" id="summary-posts">0 <small>un.</small></span></div>
+            <div class="material-list" id="material-list"></div>
+            <div class="summary-actions"><button class="button" id="copy-list" type="button">Copiar lista</button><button class="button" id="print-list" type="button">Imprimir</button></div>
+            <p class="caveat">Estimación geométrica: no incluye placas, anclajes, bisagras, cerradura ni holguras de montaje. Verifica medidas en obra antes de comprar.</p>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="settings-title">
+          <div class="panel-head"><div><h2 class="panel-title" id="settings-title">Especificaciones</h2><p class="panel-kicker">Ajusta las medidas de esta reja</p></div><span class="micro-label">mm · m · cm</span></div>
+          <div class="settings-body">
+            <div class="settings-grid">
+              <div class="field"><label for="height">Altura de reja</label><div class="units-input"><input id="height" type="number" min="0.3" max="5" step="0.05" value="1.8"><span class="unit">m</span></div></div>
+              <div class="field"><label for="post-spacing">Dist. máx. pilares</label><div class="units-input"><select id="post-spacing"><option value="2">2,0</option><option value="2.5" selected>2,5</option></select><span class="unit">m</span></div></div>
+              <div class="field"><label for="gap">Separación barrotes</label><div class="units-input"><input id="gap" type="number" min="5" max="30" step="1" value="10"><span class="unit">cm</span></div></div>
+              <div class="field"><label for="stock">Largo comercial</label><div class="units-input"><select id="stock"><option value="6" selected>6,0</option><option value="6.1">6,1</option><option value="12">12,0</option></select><span class="unit">m</span></div></div>
+              <p class="divider-label">Perfiles seleccionados</p>
+              <div class="field setting-wide"><label for="post-profile">Pilares</label><select id="post-profile"><option>40x40x2 mm</option><option>50x50x2 mm</option><option>60x60x2 mm</option></select></div>
+              <div class="field setting-wide"><label for="frame-profile">Marco perimetral</label><select id="frame-profile"><option>30x40x2 mm</option><option>40x40x2 mm</option><option>40x60x2 mm</option></select></div>
+              <div class="field setting-wide"><label for="bar-profile">Barrotes verticales</label><select id="bar-profile"><option>20x20x1.5 mm</option><option>15x15x1.5 mm</option><option>12 mm redondo</option></select></div>
+              <p class="divider-label">Casa perro</p>
+              <div class="short-options setting-wide">
+                <label class="check-label"><input id="short-bars" type="checkbox"> Agregar barras cortas entre barrotes</label>
+                <div class="field"><label for="short-height">Altura corta</label><div class="units-input"><input id="short-height" type="number" min="0.1" max="1.5" step="0.05" value="0.45"><span class="unit">m</span></div></div>
+              </div>
+              <div class="field setting-wide"><label for="waste">Margen de compra</label><div class="units-input"><input id="waste" type="number" min="0" max="30" step="1" value="10"><span class="unit">%</span></div></div>
+            </div>
+            <p class="helper">Los largos de perfiles se redondean a barras comerciales. La cantidad de pilares incluye esquinas y extremos libres; los extremos marcados como muro no requieren pilar.</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+    <p class="footer-note">Las cantidades son referenciales y consideran paños rectangulares con barrotes verticales. El diseño estructural, la fijación a muros y los refuerzos de la puerta deben revisarse en terreno.</p>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    const example = [
+      { length: 3, turn: 'straight', type: 'fence' },
+      { length: 4, turn: 'left', type: 'fence' },
+      { length: 1, turn: 'straight', type: 'gate' },
+      { length: 3, turn: 'right', type: 'fence' }
+    ];
+    let segments = JSON.parse(localStorage.getItem('trazado-segments') || 'null') || example.map(item => ({ ...item }));
+    const byId = id => document.getElementById(id);
+    const number = (id, fallback) => Math.max(0, Number(byId(id).value) || fallback);
+    const fmt = value => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(value);
+    const fmt2 = value => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 }).format(value);
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
+    function readSettings() {
+      return {
+        height: number('height', 1.8), spacing: number('post-spacing', 2.5), gap: number('gap', 10) / 100,
+        stock: number('stock', 6), postProfile: byId('post-profile').value,
+        frameProfile: byId('frame-profile').value, barProfile: byId('bar-profile').value,
+        shortBars: byId('short-bars').checked, shortHeight: number('short-height', .45), waste: number('waste', 10) / 100
+      };
+    }
+
+    function buildPath() {
+      let x = 0, y = 0, heading = 0;
+      const points = [{ x, y }];
+      const placed = segments.map((segment, index) => {
+        if (index > 0) heading += segment.turn === 'left' ? 90 : segment.turn === 'right' ? -90 : 0;
+        const radians = heading * Math.PI / 180;
+        const start = { x, y };
+        x += Math.cos(radians) * segment.length;
+        y += Math.sin(radians) * segment.length;
+        const end = { x, y };
+        points.push(end);
+        return { ...segment, start, end, heading };
+      });
+      return { points, segments: placed };
+    }
+
+    function getEstimate(settings, path) {
+      const bays = [];
+      let internalPosts = 0;
+      for (const segment of path.segments) {
+        const count = segment.type === 'gate' ? 1 : Math.max(1, Math.ceil(segment.length / settings.spacing));
+        if (segment.type === 'fence') internalPosts += count - 1;
+        for (let index = 0; index < count; index++) bays.push(segment.length / count);
+      }
+      const endPosts = Math.max(0, path.points.length - (byId('start-wall').checked ? 1 : 0) - (byId('end-wall').checked ? 1 : 0));
+      const posts = endPosts + internalPosts;
+      const frameHeight = (() => {
+        const dimensions = settings.frameProfile.match(/\d+/g);
+        return dimensions && dimensions.length > 1 ? Number(dimensions[1]) / 1000 : .04;
+      })();
+      let frameLength = 0, bars = 0, shortBars = 0;
+      for (const width of bays) {
+        frameLength += width * 2 + settings.height * 2;
+        const clearWidth = Math.max(0, width - frameHeight * 2);
+        const bayBars = Math.max(0, Math.ceil(clearWidth / settings.gap) - 1);
+        bars += bayBars;
+        shortBars += Math.max(0, bayBars - 1);
+      }
+      const barHeight = Math.max(0, settings.height - frameHeight * 2);
+      const shortCount = settings.shortBars ? shortBars : 0;
+      const shortHeight = Math.min(settings.shortHeight, barHeight);
+      const wasteFactor = 1 + settings.waste;
+      const stockQty = length => Math.ceil(length * wasteFactor / settings.stock);
+      const total = path.segments.reduce((sum, segment) => sum + segment.length, 0);
+      return {
+        total, posts, bays: bays.length, frameLength,
+        barLength: bars * barHeight,
+        shortLength: shortCount * shortHeight,
+        bars, shortCount, barHeight,
+        frameStock: stockQty(frameLength), barStock: stockQty(bars * barHeight),
+        shortStock: settings.shortBars ? stockQty(shortCount * shortHeight) : 0,
+        postPieces: Math.ceil(posts * settings.height * wasteFactor / settings.stock)
+      };
+    }
+
+    function renderSegments() {
+      const host = byId('segment-list');
+      byId('segment-count').textContent = `${segments.length} ${segments.length === 1 ? 'tramo' : 'tramos'}`;
+      if (!segments.length) {
+        host.innerHTML = '<div class="empty-state">Agrega el primer tramo para comenzar el plano.</div>';
+        return;
+      }
+      host.innerHTML = segments.map((segment, index) => `
+        <div class="segment-row" data-index="${index}">
+          <span class="segment-index">${String(index + 1).padStart(2, '0')}</span>
+          <div class="field"><label>Longitud · m</label><input type="number" min="0.1" max="100" step="0.1" value="${segment.length}" data-field="length" aria-label="Longitud del tramo ${index + 1} en metros"></div>
+          <div class="field"><label>Giro</label><select data-field="turn" aria-label="Giro antes del tramo ${index + 1}" ${index === 0 ? 'disabled' : ''}>
+            <option value="straight" ${segment.turn === 'straight' ? 'selected' : ''}>Recto</option><option value="left" ${segment.turn === 'left' ? 'selected' : ''}>Izquierda</option><option value="right" ${segment.turn === 'right' ? 'selected' : ''}>Derecha</option>
+          </select></div>
+          <div class="field"><label>Tipo de tramo</label><select data-field="type" aria-label="Tipo de tramo ${index + 1}">
+            <option value="fence" ${segment.type === 'fence' ? 'selected' : ''}>Reja</option><option value="gate" ${segment.type === 'gate' ? 'selected' : ''}>Puerta</option>
+          </select></div>
+          <button class="delete-segment" type="button" data-remove="${index}" aria-label="Eliminar tramo ${index + 1}" title="Eliminar tramo">×</button>
+        </div>`).join('');
+    }
+
+    function renderPlan(path, estimate) {
+      const svg = byId('plan');
+      if (!path.segments.length) {
+        svg.setAttribute('viewBox', '0 0 600 260');
+        svg.innerHTML = '<text x="300" y="132" text-anchor="middle" fill="#778078" font-family="Manrope, sans-serif" font-size="14">Agrega un tramo para ver el recorrido</text>';
+        return;
+      }
+      const xs = path.points.map(point => point.x), ys = path.points.map(point => point.y);
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+      const scale = Math.min(66, 440 / Math.max(maxX - minX, 1), 210 / Math.max(maxY - minY, 1));
+      const mapPoint = point => ({ x: 50 + (point.x - minX) * scale, y: (maxY === minY ? 125 : 70) + (maxY - point.y) * scale });
+      const width = Math.max(600, (maxX - minX) * scale + 100);
+      const height = Math.max(260, (maxY - minY) * scale + 110);
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      const lines = path.segments.map(segment => {
+        const start = mapPoint(segment.start), end = mapPoint(segment.end);
+        const color = segment.type === 'gate' ? '#dc704b' : '#246b50';
+        const dx = end.x - start.x, dy = end.y - start.y;
+        const labelX = (start.x + end.x) / 2 + (dy === 0 ? 0 : 14);
+        const labelY = (start.y + end.y) / 2 + (dx === 0 ? 0 : -12);
+        return `<g><line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="${color}" stroke-width="9" stroke-linecap="round"/><line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="#fffefa" stroke-width="2" stroke-dasharray="3 5"/><text x="${labelX}" y="${labelY}" text-anchor="middle" fill="#36463b" font-family="DM Mono, monospace" font-size="11">${fmt(segment.length)} m${segment.type === 'gate' ? ' · puerta' : ''}</text></g>`;
+      }).join('');
+      const postLocations = [...path.points];
+      for (const segment of path.segments) {
+        if (segment.type === 'fence') {
+          const count = Math.max(1, Math.ceil(segment.length / readSettings().spacing));
+          for (let index = 1; index < count; index++) {
+            const ratio = index / count;
+            postLocations.push({ x: segment.start.x + (segment.end.x - segment.start.x) * ratio, y: segment.start.y + (segment.end.y - segment.start.y) * ratio });
+          }
+        }
+      }
+      const postsSvg = postLocations.map((point, index) => {
+        if ((index === 0 && byId('start-wall').checked) || (index === postLocations.length - 1 && byId('end-wall').checked)) return '';
+        const position = mapPoint(point);
+        return `<circle cx="${position.x}" cy="${position.y}" r="5.5" fill="#fffefa" stroke="#246b50" stroke-width="2.5"/>`;
+      }).join('');
+      const first = mapPoint(path.points[0]), last = mapPoint(path.points[path.points.length - 1]);
+      svg.innerHTML = `<g>${lines}${postsSvg}<text x="${first.x}" y="${first.y + 24}" fill="#778078" font-family="DM Mono, monospace" font-size="9">INICIO</text><text x="${last.x}" y="${last.y + 24}" fill="#778078" font-family="DM Mono, monospace" font-size="9">FINAL</text></g>`;
+      byId('total-length').textContent = `${fmt(estimate.total)} m lineales`;
+    }
+
+    function renderSummary(settings, estimate) {
+      byId('summary-length').innerHTML = `${fmt(estimate.total)} <small>m</small>`;
+      byId('summary-posts').innerHTML = `${estimate.posts} <small>un.</small>`;
+      const stockLabel = quantity => `${quantity} ${quantity === 1 ? 'barra' : 'barras'}`;
+      const materials = [
+        { name: `Pilares · ${settings.postProfile}`, detail: `${estimate.posts} cortes de ${fmt(settings.height)} m`, quantity: `${estimate.posts} un.` },
+        { name: `Marco · ${settings.frameProfile}`, detail: `${fmt2(estimate.frameLength)} m lineales + margen`, quantity: stockLabel(estimate.frameStock) },
+        { name: `Barrotes · ${settings.barProfile}`, detail: `${estimate.bars} piezas de ${fmt2(estimate.barHeight)} m`, quantity: stockLabel(estimate.barStock) }
+      ];
+      if (settings.shortBars) materials.push({ name: `Casa perro · ${settings.barProfile}`, detail: `${estimate.shortCount} piezas de ${fmt2(Math.min(settings.shortHeight, estimate.barHeight))} m`, quantity: stockLabel(estimate.shortStock) });
+      byId('material-list').innerHTML = materials.map(item => `<div class="material-item"><div><div class="material-name">${escapeHtml(item.name)}</div><div class="material-detail">${item.detail}</div></div><span class="material-qty">${item.quantity}</span></div>`).join('');
+    }
+
+    function update(renderList = true) {
+      const path = buildPath();
+      const settings = readSettings();
+      const estimate = getEstimate(settings, path);
+      if (renderList) renderSegments();
+      renderPlan(path, estimate);
+      renderSummary(settings, estimate);
+      localStorage.setItem('trazado-segments', JSON.stringify(segments));
+    }
+
+    byId('segment-list').addEventListener('input', event => {
+      const field = event.target.dataset.field;
+      const row = event.target.closest('.segment-row');
+      if (!field || !row) return;
+      const index = Number(row.dataset.index);
+      segments[index][field] = field === 'length' ? Math.max(.1, Number(event.target.value) || .1) : event.target.value;
+      if (field === 'length' && Number(event.target.value) < .1) event.target.value = .1;
+      update(false);
+    });
+    byId('segment-list').addEventListener('change', event => {
+      const field = event.target.dataset.field;
+      const row = event.target.closest('.segment-row');
+      if (!field || !row) return;
+      segments[Number(row.dataset.index)][field] = field === 'length' ? Math.max(.1, Number(event.target.value) || .1) : event.target.value;
+      update(false);
+    });
+    byId('segment-list').addEventListener('click', event => {
+      const index = event.target.closest('[data-remove]')?.dataset.remove;
+      if (index === undefined) return;
+      segments.splice(Number(index), 1);
+      update();
+    });
+    byId('add-segment').addEventListener('click', () => {
+      segments.push({ length: 3, turn: segments.length ? 'right' : 'straight', type: 'fence' });
+      update();
+      byId('segment-list').lastElementChild?.querySelector('[data-field="length"]')?.focus();
+    });
+    byId('reset').addEventListener('click', () => {
+      segments = example.map(item => ({ ...item }));
+      byId('start-wall').checked = true;
+      byId('end-wall').checked = true;
+      update();
+    });
+    document.querySelector('.settings-body').addEventListener('input', update);
+    document.querySelector('.settings-body').addEventListener('change', update);
+    document.querySelector('.endpoints').addEventListener('change', update);
+    byId('copy-list').addEventListener('click', async () => {
+      const text = [...byId('material-list').querySelectorAll('.material-item')].map(item => `${item.querySelector('.material-name').textContent}: ${item.querySelector('.material-qty').textContent} (${item.querySelector('.material-detail').textContent})`).join('\n');
+      try {
+        await navigator.clipboard.writeText(`Reja · ${byId('summary-length').textContent}\n${text}`);
+        showToast('Lista copiada al portapapeles');
+      } catch { showToast('No se pudo acceder al portapapeles'); }
+    });
+    byId('print-list').addEventListener('click', () => window.print());
+    let toastTimer;
+    function showToast(message) {
+      const toast = byId('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+    update();
+  </script>
+</body>
+</html>
